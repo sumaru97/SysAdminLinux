@@ -1,0 +1,22 @@
+echo "Audit"
+echo
+echo "Nom d'Hote :"
+hostname
+echo
+echo "Version du Noyau:"
+uname -r
+echo
+echo "Auteur:"
+lsb_release -a
+echo
+echo "Date et Heure:"
+date
+echo
+echo "Nombre de Processeurs:"
+ps -ef | wc -l
+echo
+echo "RAM:"
+free -h
+echo
+echo "Occupation Disque:"
+df -h -t ext4
