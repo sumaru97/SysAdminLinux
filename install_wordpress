@@ -15,6 +15,9 @@ cat > /etc/apache2/sites-available/wordpress.conf <<EOF
 <VirtualHost *:80>
     ServerName wordpress.cindy.lan
     DocumentRoot /var/www/wordpress
+    <Directory /var/www/wordpress>
+        AllowOverride All
+    </VirtualHost>
 </VirtualHost>
 EOF
 
