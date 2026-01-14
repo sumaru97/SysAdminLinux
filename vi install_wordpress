@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Téléchargement de wordpress Français latest
+cd /var/www
+wget https://fr.wordpress.org/latest-fr_FR.zip
+
+# Installation de wordpress
+unzip latest-fr_FR.zip
+
+# Changement propriétaire wordpress
+chown -R www-data:www-data wordpress/
+
+# Ecriture du virtual host Apache
+cat > /etc/apache2/sites-available/wordpress.conf <<EOF
+<VirtualHost *:80>
+    ServerName wordpress.cindy.lan
+    DocumentRoot /var/www/wordpress
+</VirtualHost>
+EOF
+
+# Activation du virtualhost wordpress
+a2ensite wordpress
+
+# Rechargement de Apache
+systemctl reload apache2
+
+# Création de la base de données wordpress
+mariadb << EOF
+create database if not exists wordpress;
+create user if not exists wordpress@localhost identified by "tech\$123";
+grant all privileges on wordpress.* to wordpress@localhost;
+flush privileges;
+EOF
+
+# END
+echo "L'installation de votre site wordpress est terminée et doit être finalisée sur http://wordpress.cindy.lan"
