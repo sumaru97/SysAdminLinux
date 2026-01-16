@@ -1,39 +1,86 @@
 #!/bin/bash
 
+user="bob"
+pass="tech$123"
+
+useradd $user -m -s /bin/bash
+echo $user:$pass | chpasswd 2>/dev/null
+
 # Téléchargement de wordpress Français latest
-cd /var/www
+cd /tmp
 wget https://fr.wordpress.org/latest-fr_FR.zip
 
-# Installation de wordpress
-unzip latest-fr_FR.zip
+# Décompression de wordpress
+unzip -q -o latest-fr_FR.zip
+
+# Déplacement dans le site de l'utilisateur
+mv wordpress /var/www/$user
+
+# On se déplace dans /var/www
+cd /var/www
 
 # Changement propriétaire wordpress
-chown -R www-data:www-data wordpress/
+chown -R $user:$user $user/
 
 # Ecriture du virtual host Apache
-cat > /etc/apache2/sites-available/wordpress.conf <<EOF
+cat > /etc/apache2/sites-available/$user.conf <<EOF
 <VirtualHost *:80>
-    ServerName wordpress.cindy.lan
-    DocumentRoot /var/www/wordpress
-    <Directory /var/www/wordpress>
-        AllowOverride All
-    </VirtualHost>
+    ServerName $user.cindy.lan
+    DocumentRoot /var/www/$user
+    <Directory /vat/www/$user>
+    AllowOverride All
+</Directory>
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI}
+</VirtualHost>
+EOF
+
+# Ecriture du virtual host SSL Apache
+cat > /etc/apache2/sites-available/${user$}-ssl.conf << EOF
+<VirtualHost *:443>
+        ServerName $user.jerome.lan
+        DocumentRoot /var/www/$user
+        <Directory /var/www/$user>
+                AllowOverride All
+        </Directory>
+        SSLEngine on
+        SSLCertificateFile      /etc/apache2/apache.pem
+        SSLCertificateKeyFile   /etc/apache2/apache.key
 </VirtualHost>
 EOF
 
 # Activation du virtualhost wordpress
-a2ensite wordpress
+a2ensite $user > /dev/null 
+a2ensite ${user}-ssl > /dev/null
 
 # Rechargement de Apache
 systemctl reload apache2
 
 # Création de la base de données wordpress
 mariadb << EOF
-create database if not exists wordpress;
-create user if not exists wordpress@localhost identified by "tech\$123";
-grant all privileges on wordpress.* to wordpress@localhost;
+create database if not exists $user;
+create user if not exists $user@localhost identified by "$pass";
+grant all privileges on $user.* to $user@localhost;
 flush privileges;
 EOF
 
+# Remplissage du fichier wp-config.php
+cp $user/wp-config-sample.php $user/wp-config.php
+sed -i "s/database_name_here/$user/" $user/wp-config.php
+sed -i "s/username_here/$user/" $user/wp-config.php
+sed -i "s/password_here/$pass/" $user/wp-config.php
+
+# Ajout cname dynamique
+nsupdate <<EOF
+server 127.0.0.1
+zone cindy.lan
+update add $user.cindy.lan. 604800 in cname debian.cindy.lan.
+send
+EOF
+
+# Fin de l'installation
+mail $user@cindy.lan -s "Votre site Wordpress" << EOF
+
 # END
-echo "L'installation de votre site wordpress est terminée et doit être finalisée sur http://wordpress.cindy.lan"
+echo "L'installation de votre site wordpress est terminée et doit être finalisée sur https://$user.cindy.lan"
